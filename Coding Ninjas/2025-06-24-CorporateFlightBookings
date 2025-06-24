@@ -1,0 +1,27 @@
+import java.util.* ;
+import java.io.*; 
+import java.util.ArrayList;
+
+public class Solution {
+    public static ArrayList < Integer > corpFlightBookings(ArrayList < ArrayList < Integer >> bookings, int n) {
+        // Write your code here.
+        ArrayList<Integer> answer = new ArrayList<>();
+        int seat[] = new int[n+2];
+        for(int i=0;i<bookings.size();i++)
+        {
+            int first = bookings.get(i).get(0);
+            int last = bookings.get(i).get(1);
+            int seats = bookings.get(i).get(2);
+
+            seat[first] += seats;
+            seat[last+1] -= seats;
+        }
+        int sum = 0;
+        for(int i=1;i<=n;i++)
+        {
+            sum += seat[i];
+            answer.add(sum);
+        }
+        return answer;
+    }
+}
