@@ -1,91 +1,80 @@
-import sys
+public class Solution {
 
-def can_solve(board):
-    # bitmasks of used digits (bits 1..9) for rows, cols, boxes
-    R = [0]*9
-    C = [0]*9
-    B = [0]*9
+    // bitmasks for rows, cols, and 3x3 boxes (bits 1..9 used)
+    private static int[] R, C, B;
 
-    def box_id(r, c): return (r//3)*3 + (c//3)
+    public static boolean isItSudoku(int matrix[][]) {
+        R = new int[9];
+        C = new int[9];
+        B = new int[9];
 
-    # initialize masks; also collect empties
-    empties = []
-    for r in range(9):
-        for c in range(9):
-            v = board[r][c]
-            if v == 0:
-                empties.append((r, c))
-            else:
-                bit = 1 << v
-                b = box_id(r, c)
-                # Input guaranteed consistent per problem, but keep a quick guard:
-                if (R[r] & bit) or (C[c] & bit) or (B[b] & bit):
-                    return False
-                R[r] |= bit; C[c] |= bit; B[b] |= bit
+        // initialize masks; validate given digits
+        for (int r = 0; r < 9; r++) {
+            for (int c = 0; c < 9; c++) {
+                int v = matrix[r][c];
+                if (v == 0) continue;
+                int bit = 1 << v;
+                int b = boxId(r, c);
+                if ((R[r] & bit) != 0 || (C[c] & bit) != 0 || (B[b] & bit) != 0) {
+                    return false; // inconsistent (problem says it won't happen)
+                }
+                R[r] |= bit;
+                C[c] |= bit;
+                B[b] |= bit;
+            }
+        }
 
-    # precompute order with MRV each step
-    def solve():
-        if not empties:
-            return True
+        return solve(matrix);
+    }
 
-        # choose the empty cell with fewest candidates (MRV)
-        best_i = -1
-        best_mask = 0
-        best_count = 10
+    private static boolean solve(int[][] a) {
+        // MRV: find the empty cell with fewest candidates
+        int bestR = -1, bestC = -1, bestMask = 0, bestCnt = 10;
 
-        for i, (r, c) in enumerate(empties):
-            mask_used = R[r] | C[c] | B[box_id(r, c)]
-            # candidates: bits in 1..9 not used
-            cand = (~mask_used) & 0x3FE  # 0b11_1111_1110 -> bits for 1..9
-            cnt = cand.bit_count()
-            if cnt == 0:
-                return False
-            if cnt < best_count:
-                best_count, best_mask, best_i = cnt, cand, i
-                if cnt == 1:
-                    break  # can't do better
+        for (int r = 0; r < 9; r++) {
+            for (int c = 0; c < 9; c++) {
+                if (a[r][c] != 0) continue;
+                int used = R[r] | C[c] | B[boxId(r, c)];
+                int cand = (~used) & 0x3FE; // bits for digits 1..9
+                int cnt = Integer.bitCount(cand);
+                if (cnt == 0) return false;   // dead end
+                if (cnt < bestCnt) {
+                    bestCnt = cnt;
+                    bestMask = cand;
+                    bestR = r;
+                    bestC = c;
+                    if (cnt == 1) break; // can't do better
+                }
+            }
+            if (bestCnt == 1) break;
+        }
 
-        # try candidates
-        r, c = empties.pop(best_i)
-        b = box_id(r, c)
-        cand = best_mask
-        while cand:
-            v_bit = cand & -cand
-            cand -= v_bit
-            v = (v_bit.bit_length() - 1)  # since bit for digit d is 1<<d
+        // no empties left => solved
+        if (bestR == -1) return true;
 
-            # place
-            R[r] |= v_bit; C[c] |= v_bit; B[b] |= v_bit
-            board[r][c] = v
+        int r = bestR, c = bestC, b = boxId(r, c);
+        int cand = bestMask;
 
-            if solve():
-                return True
+        while (cand != 0) {
+            int bit = cand & -cand;            // lowest set bit
+            cand -= bit;
+            int v = Integer.numberOfTrailingZeros(bit); // since bit = 1<<v
 
-            # undo
-            R[r] ^= v_bit; C[c] ^= v_bit; B[b] ^= v_bit
-            board[r][c] = 0
+            // place
+            R[r] |= bit; C[c] |= bit; B[b] |= bit;
+            a[r][c] = v;
 
-        # put the cell back for other branches
-        empties.insert(best_i, (r, c))
-        return False
+            if (solve(a)) return true;
 
-    return solve()
+            // undo
+            R[r] ^= bit; C[c] ^= bit; B[b] ^= bit;
+            a[r][c] = 0;
+        }
 
-def main():
-    data = sys.stdin.read().strip().split()
-    if not data:
-        return
-    t = int(data[0])
-    idx = 1
-    out = []
-    for _ in range(t):
-        board = []
-        for _ in range(9):
-            row = list(map(int, data[idx:idx+9]))
-            idx += 9
-            board.append(row)
-        out.append("yes" if can_solve(board) else "no")
-    print("\n".join(out))
+        return false;
+    }
 
-if __name__ == "__main__":
-    main()
+    private static int boxId(int r, int c) {
+        return (r / 3) * 3 + (c / 3);
+    }
+}
